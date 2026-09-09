@@ -1,4 +1,4 @@
-import CustomerForm from "@/src/components/customers/CustomerForm";
+import CustomerCreateForm from "@/src/components/customers/CustomerCreateForm";
 
 export default function NewCustomerPage() {
   return (
@@ -14,7 +14,7 @@ export default function NewCustomerPage() {
         </p>
       </div>
 
-      <CustomerForm customerId="" />
+      <CustomerCreateForm />
 
     </div>
   );

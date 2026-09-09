@@ -14,19 +14,26 @@ import {
   ErrorState,
   Input,
   LoadingState,
+  Pagination,
   Select,
   SelectOption,
 } from "../ui";
-
 
 import {
   useAppDispatch,
   useAppSelector,
 } from "@/src/store/hooks";
-import { fetchCustomers } from "@/src/features/customers/customerThunks";
+
+import {
+  fetchCustomers,
+} from "@/src/features/customers/customerThunks";
+
 import CustomerTable from "./CustomerTable";
 
-
+type CustomerStatusFilter =
+  | "all"
+  | "active"
+  | "inactive";
 
 const STATUS_OPTIONS: SelectOption[] = [
   {
@@ -43,11 +50,12 @@ const STATUS_OPTIONS: SelectOption[] = [
   },
 ];
 
+const ITEMS_PER_PAGE = 10;
+
 export default function CustomerPageClient() {
   const router = useRouter();
 
-  const dispatch =
-    useAppDispatch();
+  const dispatch = useAppDispatch();
 
   const {
     items: customers,
@@ -61,61 +69,114 @@ export default function CustomerPageClient() {
     useState("");
 
   const [status, setStatus] =
-    useState("all");
+    useState<CustomerStatusFilter>("all");
 
+  const [currentPage, setCurrentPage] =
+    useState(1);
+
+  /*
+   * Fetch customers
+   */
   useEffect(() => {
     dispatch(fetchCustomers());
   }, [dispatch]);
 
-  const filteredCustomers =
-    useMemo(() => {
-      const searchValue =
-        search.trim().toLowerCase();
+  /*
+   * Reset pagination when
+   * search or status changes
+   */
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, status]);
 
-      return customers.filter(
-        (customer) => {
-          const fullName =
-            `${customer.firstName} ${customer.lastName}`
-              .toLowerCase();
+  /*
+   * Search + Status filtering
+   */
+  const filteredCustomers = useMemo(() => {
+    const searchValue =
+      search.trim().toLowerCase();
 
-          const matchesSearch =
-            !searchValue ||
-            fullName.includes(
-              searchValue
-            ) ||
-            customer.email
-              .toLowerCase()
-              .includes(searchValue) ||
-            customer.phone
-              .toLowerCase()
-              .includes(searchValue);
+    return customers.filter((customer) => {
+      const fullName =
+        `${customer.firstName} ${customer.lastName}`
+          .toLowerCase();
 
-          const matchesStatus =
-            status === "all" ||
-            customer.status === status;
+      const matchesSearch =
+        !searchValue ||
+        fullName.includes(searchValue) ||
+        customer.email
+          .toLowerCase()
+          .includes(searchValue) ||
+        customer.phone
+          .toLowerCase()
+          .includes(searchValue);
 
-          return (
-            matchesSearch &&
-            matchesStatus
-          );
-        }
+      /*
+       * "all" means both active
+       * and inactive customers.
+       */
+      const matchesStatus =
+        status === "all" ||
+        customer.status === status;
+
+      return (
+        matchesSearch &&
+        matchesStatus
       );
-    }, [
-      customers,
-      search,
-      status,
-    ]);
+    });
+  }, [
+    customers,
+    search,
+    status,
+  ]);
 
+  /*
+   * Calculate total pages
+   */
+  const totalPages = Math.ceil(
+    filteredCustomers?.length /
+      ITEMS_PER_PAGE
+  );
+
+  /*
+   * Get customers for current page
+   */
+  const paginatedCustomers = useMemo(() => {
+    const startIndex =
+      (currentPage - 1) *
+      ITEMS_PER_PAGE;
+
+    const endIndex =
+      startIndex + ITEMS_PER_PAGE;
+
+    return filteredCustomers.slice(
+      startIndex,
+      endIndex
+    );
+  }, [
+    filteredCustomers,
+    currentPage,
+  ]);
+
+  /*
+   * Retry fetching customers
+   */
   const handleRetry = () => {
     dispatch(fetchCustomers());
   };
 
+  /*
+   * Add customer
+   */
   const handleAddCustomer = () => {
     router.push(
       "/customers/new"
     );
   };
 
+  /*
+   * Customer detail
+   */
   const handleCustomerClick = (
     customerId: string
   ) => {
@@ -128,6 +189,7 @@ export default function CustomerPageClient() {
     <div className="space-y-6 p-6">
 
       {/* Page Header */}
+
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
         <div>
@@ -143,9 +205,7 @@ export default function CustomerPageClient() {
 
         <Button
           variant="primary"
-          onClick={
-            handleAddCustomer
-          }
+          onClick={handleAddCustomer}
         >
           + Add Customer
         </Button>
@@ -153,9 +213,12 @@ export default function CustomerPageClient() {
       </div>
 
       {/* Filters */}
+
       <div className="rounded-xl border border-gray-200 bg-white p-4">
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_220px]">
+
+          {/* Search */}
 
           <Input
             label="Search"
@@ -168,22 +231,17 @@ export default function CustomerPageClient() {
             }
           />
 
+          {/* Status */}
+
           <Select
             label="Status"
             value={status}
             onChange={(event) =>
               setStatus(
-                event.target.value
+                event.target.value as CustomerStatusFilter
               )
             }
-            options={
-              STATUS_OPTIONS.filter(
-                (option) =>
-                  option.value !==
-                  "all"
-              )
-            }
-            placeholder="All Status"
+            options={STATUS_OPTIONS}
           />
 
         </div>
@@ -191,6 +249,7 @@ export default function CustomerPageClient() {
       </div>
 
       {/* Loading */}
+
       {loading && (
         <div className="rounded-xl border border-gray-200 bg-white">
           <LoadingState
@@ -200,6 +259,7 @@ export default function CustomerPageClient() {
       )}
 
       {/* Error */}
+
       {!loading && error && (
         <ErrorState
           title="Unable to load customers"
@@ -207,9 +267,7 @@ export default function CustomerPageClient() {
           action={
             <Button
               variant="outline"
-              onClick={
-                handleRetry
-              }
+              onClick={handleRetry}
             >
               Try Again
             </Button>
@@ -218,10 +276,10 @@ export default function CustomerPageClient() {
       )}
 
       {/* Empty */}
+
       {!loading &&
         !error &&
-        filteredCustomers.length ===
-          0 && (
+        filteredCustomers.length === 0 && (
           <EmptyState
             title={
               customers.length === 0
@@ -234,8 +292,7 @@ export default function CustomerPageClient() {
                 : "Try changing your search or status filter."
             }
             action={
-              customers.length ===
-              0 ? (
+              customers.length === 0 ? (
                 <Button
                   onClick={
                     handleAddCustomer
@@ -248,19 +305,31 @@ export default function CustomerPageClient() {
           />
         )}
 
-      {/* Table */}
+      {/* Customer Table + Pagination */}
+
       {!loading &&
         !error &&
-        filteredCustomers.length >
-          0 && (
-          <CustomerTable
-            customers={
-              filteredCustomers
-            }
-            onCustomerClick={
-              handleCustomerClick
-            }
-          />
+        filteredCustomers.length > 0 && (
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+
+            <CustomerTable
+              customers={
+                paginatedCustomers
+              }
+              onCustomerClick={
+                handleCustomerClick
+              }
+            />
+
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={
+                setCurrentPage
+              }
+            />
+
+          </div>
         )}
 
     </div>

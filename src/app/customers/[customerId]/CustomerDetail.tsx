@@ -290,7 +290,18 @@ export default function CustomerDetail({
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+
+        {/* Back button */}
+
+    <div>
+        <Button
+            variant="outline"
+            onClick={() => router.push("/customers")}
+        >
+            ← Back to Customers
+        </Button>
+    </div>
 
       {/* Header */}
 

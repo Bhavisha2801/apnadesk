@@ -48,17 +48,11 @@ export const handlers = [
 
     const newCustomer: Customer = {
       id: `customer-${Date.now()}`,
-      firstName: body.firstName,
-      lastName: body.lastName,
-      email: body.email,
-      phone: body.phone,
-      status: body.status,
-      dateOfBirth: body.dateOfBirth,
-      address: body.address,
+      ...body,
       createdAt: new Date().toISOString(),
     };
 
-    customers.push(newCustomer);
+    customers.unshift(newCustomer);
 
     console.log("MSW: Customer created", newCustomer);
 
@@ -108,7 +102,7 @@ export const handlers = [
     if (index === -1) {
       return HttpResponse.json(
         {
-          message: "Customer not found",
+          message: "Customer not found.",
         },
         {
           status: 404,

@@ -22,5 +22,11 @@ export async function apiClient<T>(
     );
   }
 
+  if(response.status === 204) {
+    return {} as T;
+  }
+
+  console.log(response, 'response');
+
   return response.json();
 }

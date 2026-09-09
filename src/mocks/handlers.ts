@@ -10,8 +10,47 @@ import { CreateCustomerInput, Customer, UpdateCustomerInput } from "../types/cus
 import { CreateNoteInput, Note } from "../types/note";
 import { CreateFormInput } from "../types/form";
 import { FormResponse } from "../types/response";
+import { CreateFileInput, CustomerFile, FileType } from "../types/files";
+import { files } from "./data/files";
 
+function getFileType(
+  mimeType: string
+): FileType {
+  if (
+    mimeType.startsWith(
+      "image/"
+    )
+  ) {
+    return "image";
+  }
 
+  if (
+    mimeType ===
+    "application/pdf"
+  ) {
+    return "pdf";
+  }
+
+  if (
+    mimeType.startsWith(
+      "video/"
+    )
+  ) {
+    return "video";
+  }
+
+  if (
+    mimeType.includes("word") ||
+    mimeType.includes("document") ||
+    mimeType.includes("text") ||
+    mimeType.includes("excel") ||
+    mimeType.includes("spreadsheet")
+  ) {
+    return "document";
+  }
+
+  return "other";
+}
 export const handlers = [
 
 // Customer Handlers
@@ -599,5 +638,309 @@ http.post(
       }
     );
   }
+
+  
 ),
+
+// GET CUSTOMER FILES
+http.get(
+  "/api/customers/:customerId/files",
+  ({ params }) => {
+    const customerId =
+      params.customerId as string;
+
+    const customerFiles =
+      files.filter(
+        (file) =>
+          file.customerId ===
+          customerId
+      );
+
+    return HttpResponse.json(
+      customerFiles,
+      {
+        status: 200,
+      }
+    );
+  }
+),
+
+// CREATE FILE
+http.post(
+  "/api/customers/:customerId/files",
+  async ({ request, params }) => {
+    const customerId =
+      params.customerId as string;
+
+    const formData =
+      await request.formData();
+
+    const file =
+      formData.get("file");
+
+    const uploadedBy =
+      formData.get("uploadedBy");
+
+    if (!(file instanceof File)) {
+      return HttpResponse.json(
+        {
+          message:
+            "No file was uploaded.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const newFile: CustomerFile = {
+      id: `file-${Date.now()}`,
+
+      customerId,
+
+      name: file.name,
+
+      /*
+       * Since this is currently a mock,
+       * we don't have real persistent
+       * file storage yet.
+       */
+      url: "",
+
+      type: getFileType(
+        file.type
+      ),
+
+      mimeType: file.type,
+
+      size: file.size,
+
+      uploadedBy:
+        String(
+          uploadedBy ||
+            "Admin"
+        ),
+
+      uploadedAt:
+        new Date().toISOString(),
+    };
+
+    files.unshift(newFile);
+
+    return HttpResponse.json(
+      {
+        newFile,
+      },
+      {
+        status: 201,
+      }
+    );
+  }
+),
+
+// GET FILE
+http.get(
+  "/api/customers/:customerId/files",
+  ({ params }) => {
+    const customerId =
+      params.customerId as string;
+
+    const customerFiles =
+      files.filter(
+        (file) =>
+          file.customerId ===
+          customerId
+      );
+
+    // IMPORTANT:
+    // Even when there are no files,
+    // return an empty array with 200.
+    //
+    // Do NOT return 404 here.
+
+    return HttpResponse.json(
+      customerFiles,
+      {
+        status: 200,
+      }
+    );
+  }
+),
+
+// UPDATE FILE
+http.put(
+  "/api/files/:fileId",
+  async ({ request, params }) => {
+    const fileId =
+      params.fileId as string;
+
+    const formData =
+      await request.formData();
+
+    const uploadedFile =
+      formData.get("file");
+
+    const uploadedBy =
+      formData.get("uploadedBy");
+
+    // -----------------------------------------
+    // Find existing file
+    // -----------------------------------------
+
+    const fileIndex =
+      files.findIndex(
+        (file) =>
+          file.id === fileId
+      );
+
+    if (fileIndex === -1) {
+      return HttpResponse.json(
+        {
+          message:
+            "File not found.",
+        },
+        {
+          status: 404,
+        }
+      );
+    }
+
+    const existingFile =
+      files[fileIndex];
+
+    // -----------------------------------------
+    // Validate uploaded file
+    // -----------------------------------------
+
+    if (
+      uploadedFile !== null &&
+      !(uploadedFile instanceof File)
+    ) {
+      return HttpResponse.json(
+        {
+          message:
+            "Invalid file.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    // -----------------------------------------
+    // Create updated file
+    // -----------------------------------------
+
+    const updatedFile: CustomerFile = {
+      ...existingFile,
+
+      uploadedBy:
+        typeof uploadedBy === "string"
+          ? uploadedBy
+          : existingFile.uploadedBy,
+
+      uploadedAt:
+        new Date().toISOString(),
+    };
+
+    // -----------------------------------------
+    // If user selected a replacement file
+    // -----------------------------------------
+
+    if (
+      uploadedFile instanceof File
+    ) {
+      updatedFile.name =
+        uploadedFile.name;
+
+      updatedFile.mimeType =
+        uploadedFile.type;
+
+      updatedFile.size =
+        uploadedFile.size;
+
+      updatedFile.type =
+        getFileType(
+          uploadedFile.type
+        );
+
+      /*
+       * Because this is an MSW mock,
+       * we don't have actual file storage.
+       *
+       * Keep the existing URL if one exists.
+       */
+      updatedFile.url =
+        existingFile.url;
+    }
+
+    // -----------------------------------------
+    // Update mock database
+    // -----------------------------------------
+
+    files[fileIndex] =
+      updatedFile;
+
+    // -----------------------------------------
+    // Response
+    // -----------------------------------------
+
+    return HttpResponse.json(
+      {
+        updatedFile,
+      },
+      {
+        status: 200,
+      }
+    );
+  }
+),
+
+// DELETE FILE
+http.delete(
+  "/api/files/:fileId",
+  ({ params }) => {
+    const fileId =
+      params.fileId as string;
+
+    const fileIndex =
+      files.findIndex(
+        (file) =>
+          file.id === fileId
+      );
+
+    // Only return 404 if the specific
+    // file really doesn't exist.
+
+    if (fileIndex === -1) {
+      return HttpResponse.json(
+        {
+          message:
+            "File not found.",
+        },
+        {
+          status: 404,
+        }
+      );
+    }
+
+    // Remove the file
+    files.splice(
+      fileIndex,
+      1
+    );
+
+    return HttpResponse.json(
+      {
+        message:
+          "File deleted successfully.",
+        fileId,
+      },
+      {
+        status: 200,
+      }
+    );
+  }
+),
+
 ];

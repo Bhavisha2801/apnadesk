@@ -33,6 +33,7 @@ import type {
 import CustomerNotes from "@/src/components/notes/CustomerNotes";
 import CustomerFormResponses from "@/src/components/forms/CustomerFormResponses";
 import CustomerForms from "@/src/components/customers/CustomerForm";
+import CustomerFiles from "@/src/components/files/CustomerFiles";
 
 interface CustomerDetailProps {
   customerId: string;
@@ -279,11 +280,9 @@ export default function CustomerDetail({
       label: "Files",
 
       content: (
-        <div className="py-8">
-          <p className="text-gray-500">
-            Files module will be implemented next.
-          </p>
-        </div>
+        <CustomerFiles
+          customerId={customerId}
+        />
       ),
     },
   ];

@@ -30,6 +30,7 @@ import {
 import type {
   Customer,
 } from "@/src/types/customer";
+import CustomerNotes from "@/src/components/notes/CustomerNotes";
 
 interface CustomerDetailProps {
   customerId: string;
@@ -254,12 +255,10 @@ export default function CustomerDetail({
       label: "Notes",
 
       content: (
-        <div className="py-8">
-          <p className="text-gray-500">
-            Notes module will be implemented next.
-          </p>
-        </div>
-      ),
+      <CustomerNotes
+        customerId={customerId}
+      />
+    ),
     },
 
     {

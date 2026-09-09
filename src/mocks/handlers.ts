@@ -7,6 +7,7 @@ import { forms } from "./data/forms";
 import { notes } from "./data/note";
 import { responses } from "./data/responses";
 import { CreateCustomerInput, Customer, UpdateCustomerInput } from "../types/customer";
+import { CreateNoteInput, Note } from "../types/note";
 
 
 export const handlers = [
@@ -157,35 +158,173 @@ export const handlers = [
   }
 ),
 
-//   Notes handlers
-  http.get(
-    "/api/notes",
-    () => {
-        return HttpResponse.json(notes);
-    }
-  ),
+// ===============================
+// NOTES HANDLERS
+// ===============================
 
-  http.get(
-    "/api/notes/:id",
-    ({ params }) => {
-      const note = notes.find(
-        note => note.id === params.id
+// GET CUSTOMER NOTES
+http.get(
+  "/api/customers/:customerId/notes",
+  ({ params }) => {
+    const customerId =
+      params.customerId as string;
+
+    const customerNotes = notes.filter(
+      (note) =>
+        note.customerId === customerId
+    );
+
+    return HttpResponse.json(
+      customerNotes
+    );
+  }
+),
+
+// GET SINGLE NOTE
+http.get(
+  "/api/notes/:noteId",
+  ({ params }) => {
+    const noteId =
+      params.noteId as string;
+
+    const note = notes.find(
+      (note) =>
+        note.id === noteId
+    );
+
+    if (!note) {
+      return HttpResponse.json(
+        {
+          message: "Note not found.",
+        },
+        {
+          status: 404,
+        }
+      );
+    }
+
+    return HttpResponse.json(note);
+  }
+),
+
+// CREATE NOTE
+http.post(
+  "/api/customers/:customerId/notes",
+  async ({
+    params,
+    request,
+  }) => {
+    const customerId =
+      params.customerId as string;
+
+    const body =
+      (await request.json()) as CreateNoteInput;
+
+    const newNote: Note = {
+      id: `note-${Date.now()}`,
+      customerId,
+      content: body.content,
+      createdBy: body.createdBy,
+      createdAt:
+        new Date().toISOString(),
+      updatedAt:
+        new Date().toISOString(),
+    };
+
+    notes.unshift(newNote);
+
+    return HttpResponse.json(
+      newNote,
+      {
+        status: 201,
+      }
+    );
+  }
+),
+
+// UPDATE NOTE
+http.put(
+  "/api/notes/:noteId",
+  async ({
+    params,
+    request,
+  }) => {
+    const noteId =
+      params.noteId as string;
+
+    const index =
+      notes.findIndex(
+        (note) =>
+          note.id === noteId
       );
 
-      if (!note) {
-        return HttpResponse.json(
-          {
-            message: "Note not found",
-          },
-          {
-            status: 404,
-          }
-        );
-      }
-
-      return HttpResponse.json(note);
+    if (index === -1) {
+      return HttpResponse.json(
+        {
+          message: "Note not found.",
+        },
+        {
+          status: 404,
+        }
+      );
     }
-  ),
+
+    const body =
+      (await request.json()) as Pick<
+        Note,
+        "content"
+      >;
+
+    const updatedNote: Note = {
+      ...notes[index],
+      content: body.content,
+      updatedAt:
+        new Date().toISOString(),
+    };
+
+    notes[index] =
+      updatedNote;
+
+    return HttpResponse.json(
+      updatedNote
+    );
+  }
+),
+
+// DELETE NOTE
+http.delete(
+  "/api/notes/:noteId",
+  ({ params }) => {
+    const noteId =
+      params.noteId as string;
+
+    const index =
+      notes.findIndex(
+        (note) =>
+          note.id === noteId
+      );
+
+    if (index === -1) {
+      return HttpResponse.json(
+        {
+          message: "Note not found.",
+        },
+        {
+          status: 404,
+        }
+      );
+    }
+
+    notes.splice(index, 1);
+
+    return new HttpResponse(
+      null,
+      {
+        status: 204,
+      }
+    );
+  }
+),
 
 //   Form Responses handlers
     http.get(

@@ -10,6 +10,7 @@ interface ModalProps {
   onClose: () => void;
   title?: string;
   children: ReactNode;
+  footer?: ReactNode;
   size?: "sm" | "md" | "lg" | "xl";
   showCloseButton?: boolean;
 }
@@ -26,6 +27,7 @@ export default function Modal({
   onClose,
   title,
   children,
+  footer,
   size = "md",
   showCloseButton = true,
 }: ModalProps) {
@@ -112,6 +114,13 @@ export default function Modal({
         <div className="max-h-[80vh] overflow-y-auto p-5">
           {children}
         </div>
+
+        {/* Footer */}
+        {footer && (
+          <div className="flex items-center justify-end gap-3 border-t border-gray-200 bg-gray-50 px-5 py-4">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );

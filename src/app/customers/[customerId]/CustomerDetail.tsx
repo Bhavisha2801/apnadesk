@@ -31,6 +31,8 @@ import type {
   Customer,
 } from "@/src/types/customer";
 import CustomerNotes from "@/src/components/notes/CustomerNotes";
+import CustomerFormResponses from "@/src/components/forms/CustomerFormResponses";
+import CustomerForms from "@/src/components/customers/CustomerForm";
 
 interface CustomerDetailProps {
   customerId: string;
@@ -266,11 +268,9 @@ export default function CustomerDetail({
       label: "Forms",
 
       content: (
-        <div className="py-8">
-          <p className="text-gray-500">
-            Forms module will be implemented next.
-          </p>
-        </div>
+        <CustomerForms
+          customerId={customerId}
+        />
       ),
     },
 

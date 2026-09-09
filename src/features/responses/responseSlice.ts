@@ -1,82 +1,193 @@
-import { Customer } from "@/src/types/customer";
-import { FormResponse } from "@/src/types/response";
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import {
+  createSlice,
+  PayloadAction,
+} from "@reduxjs/toolkit";
 
-interface ResponseState {
+import type {
+  FormResponse,
+} from "../../types/response";
+
+import {
+  fetchFormResponses,
+  fetchCustomerFormResponses,
+  fetchFormResponse,
+  createFormResponse,
+} from "./responseThunks";
+
+interface FormResponseState {
   items: FormResponse[];
+  selectedResponse:
+    | FormResponse
+    | null;
+
   loading: boolean;
   error: string | null;
 }
 
-const initialState: ResponseState = {
-  items: [],
-  loading: false,
-  error: null,
-};
+const initialState:
+  FormResponseState = {
+    items: [],
+    selectedResponse: null,
+    loading: false,
+    error: null,
+  };
 
-const responseSlice = createSlice({
-  name: "responses",
-  initialState,
+const formResponseSlice =
+  createSlice({
+    name: "formResponses",
 
-  reducers: {
-    setResponses(
-      state,
-      action: PayloadAction<FormResponse[]>
-    ) {
-      state.items = action.payload;
+    initialState,
+
+    reducers: {
+
+      setResponses(
+        state,
+        action: PayloadAction<
+          FormResponse[]
+        >
+      ) {
+        state.items =
+          action.payload;
+      },
+
+      setSelectedResponse(
+        state,
+        action: PayloadAction<
+          FormResponse | null
+        >
+      ) {
+        state.selectedResponse =
+          action.payload;
+      },
+
+      clearResponses(state) {
+        state.items = [];
+        state.selectedResponse =
+          null;
+      },
     },
 
-    addResponse(
-      state,
-      action: PayloadAction<FormResponse>
-    ) {
-      state.items.unshift(action.payload);
-    },
+    extraReducers: builder => {
 
-    updateResponse(
-      state,
-      action: PayloadAction<FormResponse>
-    ) {
-      const index = state.items.findIndex(
-        response => response.id === action.payload.id
-      );
+      builder
 
-      if (index !== -1) {
-        state.items[index] = action.payload;
-      }
-    },
+        .addCase(
+          fetchFormResponses.pending,
+          state => {
+            state.loading = true;
+            state.error = null;
+          }
+        )
 
-    removeResponse(
-      state,
-      action: PayloadAction<string>
-    ) {
-      state.items = state.items.filter(
-        response => response.id !== action.payload
-      );
-    },
+        .addCase(
+          fetchFormResponses.fulfilled,
+          (state, action) => {
+            state.loading = false;
+            state.items =
+              action.payload;
+          }
+        )
 
-    setLoading(
-      state,
-      action: PayloadAction<boolean>
-    ) {
-      state.loading = action.payload;
-    },
+        .addCase(
+          fetchFormResponses.rejected,
+          (state, action) => {
+            state.loading = false;
+            state.error =
+              action.error.message ??
+              "Failed to load responses.";
+          }
+        )
 
-    setError(
-      state,
-      action: PayloadAction<string | null>
-    ) {
-      state.error = action.payload;
+        .addCase(
+          fetchCustomerFormResponses.pending,
+          state => {
+            state.loading = true;
+            state.error = null;
+          }
+        )
+
+        .addCase(
+          fetchCustomerFormResponses.fulfilled,
+          (state, action) => {
+            state.loading = false;
+            state.items =
+              action.payload;
+          }
+        )
+
+        .addCase(
+          fetchCustomerFormResponses.rejected,
+          (state, action) => {
+            state.loading = false;
+            state.error =
+              action.error.message ??
+              "Failed to load customer responses.";
+          }
+        )
+
+        .addCase(
+          fetchFormResponse.pending,
+          state => {
+            state.loading = true;
+          }
+        )
+
+        .addCase(
+          fetchFormResponse.fulfilled,
+          (state, action) => {
+            state.loading = false;
+            state.selectedResponse =
+              action.payload;
+          }
+        )
+
+        .addCase(
+          fetchFormResponse.rejected,
+          (state, action) => {
+            state.loading = false;
+            state.error =
+              action.error.message ??
+              "Failed to load response.";
+          }
+        )
+
+        .addCase(
+          createFormResponse.pending,
+          state => {
+            state.loading = true;
+            state.error = null;
+          }
+        )
+        
+        .addCase(
+          createFormResponse.fulfilled,
+          (state, action) => {
+            state.items.unshift(
+              action.payload
+            );
+
+            state.loading = false;
+            state.error = null;
+          }
+        )
+        
+        .addCase(
+          createFormResponse.rejected,
+          (state, action) => {
+            state.loading = false;
+            state.error =
+              action.payload as string;
+          }
+        )
+
     },
-  },
-});
+  });
 
 export const {
   setResponses,
-  addResponse,
-  removeResponse,
-  setLoading,
-  setError,
-} = responseSlice.actions;
+  setSelectedResponse,
+  clearResponses,
+} =
+  formResponseSlice.actions;
 
-export default responseSlice.reducer;
+export default formResponseSlice.reducer;

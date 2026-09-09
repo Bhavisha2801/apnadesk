@@ -24,6 +24,8 @@ export {
   default as ConfirmationDialog,
 } from "./ConfirmationDialog";
 
+export { default as Textarea } from "./Textarea";
+
 export type {
   SelectOption,
 } from "./Select";

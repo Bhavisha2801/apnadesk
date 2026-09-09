@@ -1,263 +1,627 @@
 "use client";
 
 import {
-  FormEvent,
+  useEffect,
+  useMemo,
   useState,
 } from "react";
 
-import { useRouter } from "next/navigation";
-
-
-import {
-  customerService,
-} from "@/src/services/customerService";
-
 import {
   useAppDispatch,
+  useAppSelector,
 } from "@/src/store/hooks";
 
+import {
+  fetchForms,
+} from "../../features/forms/formThunks";
+
+import {
+  fetchCustomerFormResponses,
+} from "../../features/responses/responseThunks";
+
+import {
+  Button,
+  LoadingState,
+  EmptyState,
+  Modal,
+} from "../ui";
+
+
+import ResponseDetailsModal from "../forms/ResponseDetailsModal";
 
 import type {
-  CreateCustomerInput,
-} from "@/src/types/customer";
-import { Button, Input, Select, SelectOption } from "../ui";
-import { addCustomer } from "@/src/features/customers/customerSlice";
-import Textarea from "../ui/Textarea";
+  FormSchema,
+} from "@/src/types/form";
+import CustomerFormResponse from "../forms/CustomerFormResponse";
+import { customers } from "@/src/mocks/data/customer";
 
-const STATUS_OPTIONS: SelectOption[] =
-  [
-    {
-      label: "Active",
-      value: "active",
-    },
-    {
-      label: "Inactive",
-      value: "inactive",
-    },
-  ];
+interface CustomerFormsProps {
+  customerId: string;
+}
 
-const INITIAL_FORM: CreateCustomerInput =
-  {
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    status: "active",
-    dateOfBirth: "",
-    address: "",
-  };
+export default function CustomerForms({
+  customerId,
+}: CustomerFormsProps) {
 
-export default function CustomerForm() {
-  const router = useRouter();
+  const dispatch = useAppDispatch();
 
-  const dispatch =
-    useAppDispatch();
+  // --------------------------------------------------
+  // FORMS
+  // --------------------------------------------------
 
-  const [form, setForm] =
-    useState<CreateCustomerInput>(
-      INITIAL_FORM
+  const {
+    items: forms,
+    loading: formsLoading,
+  } = useAppSelector(
+    state => state.forms
+  );
+
+  // --------------------------------------------------
+  // RESPONSES
+  // --------------------------------------------------
+
+  const {
+    items: responses,
+    loading: responsesLoading,
+    error: responsesError,
+  } = useAppSelector(
+    state => state.responses
+  );
+
+  // --------------------------------------------------
+  // FILL FORM
+  // --------------------------------------------------
+
+  const [
+    selectedForm,
+    setSelectedForm,
+  ] = useState<FormSchema | null>(
+    null
+  );
+
+  const [
+    showFillForm,
+    setShowFillForm,
+  ] = useState(false);
+
+  // --------------------------------------------------
+  // RESPONSES MODAL
+  // --------------------------------------------------
+
+  const [
+    showResponses,
+    setShowResponses,
+  ] = useState(false);
+
+  const [
+    selectedResponseId,
+    setSelectedResponseId,
+  ] = useState<string | null>(
+    null
+  );
+
+  // --------------------------------------------------
+  // LOAD DATA
+  // --------------------------------------------------
+
+  useEffect(() => {
+
+    dispatch(
+      fetchForms()
     );
 
-  const [loading, setLoading] =
-    useState(false);
+    dispatch(
+      fetchCustomerFormResponses(
+        customerId
+      )
+    );
 
-  const [error, setError] =
-    useState<string | null>(
+  }, [
+    dispatch,
+    customerId,
+  ]);
+
+  // --------------------------------------------------
+  // CUSTOMER RESPONSES
+  // --------------------------------------------------
+
+  const customerResponses =
+    useMemo(() => {
+
+      return responses.filter(
+        response =>
+          response.customerId ===
+          customerId
+      );
+
+    }, [
+      responses,
+      customerId,
+    ]);
+
+  // --------------------------------------------------
+  // RESPONSE COUNT
+  // --------------------------------------------------
+
+  const getFormResponseCount = (
+    formId: string
+  ) => {
+
+    return customerResponses.filter(
+      response =>
+        response.formId ===
+        formId
+    ).length;
+
+  };
+
+  // --------------------------------------------------
+  // SELECTED FORM RESPONSES
+  // --------------------------------------------------
+
+  const selectedFormResponses =
+    useMemo(() => {
+
+      if (!selectedForm) {
+        return [];
+      }
+
+      return customerResponses
+        .filter(
+          response =>
+            response.formId ===
+            selectedForm.id
+        )
+        .sort(
+          (a, b) =>
+            new Date(
+              b.submittedAt
+            ).getTime() -
+            new Date(
+              a.submittedAt
+            ).getTime()
+        );
+
+    }, [
+      customerResponses,
+      selectedForm,
+    ]);
+
+    const selectedCustomer = useMemo(() => {
+      return (
+        customers.find(
+          customer => customer.id === customerId
+        ) ?? null
+      );
+    }, [
+      customers,
+      customerId,
+    ]);
+
+  // --------------------------------------------------
+  // FILL FORM
+  // --------------------------------------------------
+
+  const handleFillForm = (
+    form: FormSchema
+  ) => {
+
+    setSelectedForm(form);
+
+    setShowFillForm(true);
+
+  };
+
+  // --------------------------------------------------
+  // FORM SUBMISSION SUCCESS
+  // --------------------------------------------------
+
+  const handleFormSuccess = async () => {
+
+    // Refresh customer's responses
+    await dispatch(
+      fetchCustomerFormResponses(
+        customerId
+      )
+    );
+
+    // Close fill form modal
+    setShowFillForm(false);
+
+    // Clear selected form
+    setSelectedForm(null);
+
+  };
+
+  // --------------------------------------------------
+  // CANCEL FORM
+  // --------------------------------------------------
+
+  const handleCancelForm = () => {
+
+    setShowFillForm(false);
+
+    setSelectedForm(null);
+
+  };
+
+  // --------------------------------------------------
+  // VIEW RESPONSES
+  // --------------------------------------------------
+
+  const handleViewResponses = (
+    form: FormSchema
+  ) => {
+
+    setSelectedForm(form);
+
+    setShowResponses(true);
+
+  };
+
+  // --------------------------------------------------
+  // CLOSE RESPONSES
+  // --------------------------------------------------
+
+  const handleCloseResponses = () => {
+
+    setShowResponses(false);
+
+    setSelectedForm(null);
+
+  };
+
+  // --------------------------------------------------
+  // VIEW INDIVIDUAL RESPONSE
+  // --------------------------------------------------
+
+  const handleViewResponse = (
+    responseId: string
+  ) => {
+
+    setSelectedResponseId(
+      responseId
+    );
+
+  };
+
+  // --------------------------------------------------
+  // CLOSE INDIVIDUAL RESPONSE
+  // --------------------------------------------------
+
+  const handleCloseResponseDetails = () => {
+
+    setSelectedResponseId(
       null
     );
 
-  const handleChange = (
-    field: keyof CreateCustomerInput,
-    value: string
-  ) => {
-    setForm((previous) => ({
-      ...previous,
-      [field]: value,
-    }));
   };
 
-  const handleSubmit = async (
-    event: FormEvent<HTMLFormElement>
-  ) => {
-    event.preventDefault();
+  // --------------------------------------------------
+  // LOADING
+  // --------------------------------------------------
 
-    try {
-      setLoading(true);
-      setError(null);
+  if (formsLoading) {
 
-      const customer =
-        await customerService.createCustomer(
-          form
-        );
+    return (
+      <LoadingState
+        message="Loading forms..."
+      />
+    );
 
-      dispatch(
-        addCustomer(customer)
-      );
+  }
 
-      router.push(
-        `/customers/${customer.id}`
-      );
-    } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to create customer."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+  // --------------------------------------------------
+  // NO FORMS
+  // --------------------------------------------------
+
+  if (forms.length === 0) {
+
+    return (
+      <EmptyState
+        title="No forms"
+        description="No forms are available for this customer."
+      />
+    );
+
+  }
+
+  // --------------------------------------------------
+  // UI
+  // --------------------------------------------------
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-6"
-    >
+    <>
+      <div className="space-y-6">
 
-      {/* Error */}
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+        {/* HEADER */}
 
-      {/* Personal Information */}
-      <div className="rounded-xl border border-gray-200 bg-white">
+        <div>
 
-        <div className="border-b border-gray-200 px-6 py-4">
-
-          <h2 className="font-semibold text-gray-900">
-            Personal Information
+          <h2 className="text-xl font-semibold">
+            Forms
           </h2>
 
           <p className="mt-1 text-sm text-gray-500">
-            Enter the customer's basic
-            information.
+            Select a form to submit a response
+            or view this customer's submissions.
           </p>
 
         </div>
 
-        <div className="grid grid-cols-1 gap-5 p-6 md:grid-cols-2">
 
-          <Input
-            label="First Name"
-            required
-            value={form.firstName}
-            onChange={(event) =>
-              handleChange(
-                "firstName",
-                event.target.value
-              )
-            }
-          />
+        {/* FORM LIST */}
 
-          <Input
-            label="Last Name"
-            required
-            value={form.lastName}
-            onChange={(event) =>
-              handleChange(
-                "lastName",
-                event.target.value
-              )
-            }
-          />
+        <div className="space-y-4">
 
-          <Input
-            label="Email"
-            type="email"
-            required
-            value={form.email}
-            onChange={(event) =>
-              handleChange(
-                "email",
-                event.target.value
-              )
-            }
-          />
+          {forms.map(
+            form => {
 
-          <Input
-            label="Phone"
-            type="tel"
-            required
-            value={form.phone}
-            onChange={(event) =>
-              handleChange(
-                "phone",
-                event.target.value
-              )
-            }
-          />
+              const responseCount =
+                getFormResponseCount(
+                  form.id
+                );
 
-          <Input
-            label="Date of Birth"
-            type="date"
-            value={form.dateOfBirth}
-            onChange={(event) =>
-              handleChange(
-                "dateOfBirth",
-                event.target.value
-              )
-            }
-          />
+              return (
 
-          <Select
-            label="Status"
-            required
-            value={form.status}
-            onChange={(event) =>
-              handleChange(
-                "status",
-                event.target.value
-              )
-            }
-            options={
-              STATUS_OPTIONS
-            }
-            placeholder="Select status"
-          />
+                <div
+                  key={form.id}
+                  className="rounded-xl border border-gray-200 bg-white p-5"
+                >
 
-          <Textarea
-            id="address"
-            label="Address"
-            placeholder="Enter customer address"
-            rows={4}
-            value={form.address}
-            onChange={(event) =>
-                handleChange("address", event.target.value)
+                  <div className="flex items-start justify-between gap-4">
+
+                    {/* FORM INFO */}
+
+                    <div>
+
+                      <h3 className="text-base font-semibold text-gray-900">
+                        {form.name}
+                      </h3>
+
+                      <p className="mt-1 text-sm text-gray-500">
+                        {form.description}
+                      </p>
+
+                      <p className="mt-3 text-sm text-gray-500">
+                        {responseCount}{" "}
+                        {responseCount === 1
+                          ? "response"
+                          : "responses"}
+                      </p>
+
+                    </div>
+
+
+                    {/* ACTIONS */}
+
+                    <div className="flex shrink-0 gap-2">
+
+                      {/* FILL FORM */}
+
+                      <Button
+                        variant="primary"
+                        onClick={() =>
+                          handleFillForm(
+                            form
+                          )
+                        }
+                      >
+                        Fill Form
+                      </Button>
+
+
+                      {/* RESPONSES */}
+
+                      <Button
+                        variant="secondary"
+                        onClick={() =>
+                          handleViewResponses(
+                            form
+                          )
+                        }
+                      >
+                        Responses
+                      </Button>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              );
+
             }
-            />
+          )}
 
         </div>
 
       </div>
 
-      {/* Actions */}
-      <div className="flex justify-end gap-3">
 
-        <Button
-          type="button"
-          variant="outline"
-          disabled={loading}
-          onClick={() =>
-            router.push(
-              "/customers"
-            )
-          }
-        >
-          Cancel
-        </Button>
+      {/* ================================================= */}
+      {/* FILL FORM MODAL */}
+      {/* ================================================= */}
 
-        <Button
-          type="submit"
-          variant="primary"
-          loading={loading}
-        >
-          Create Customer
-        </Button>
+      <Modal
+        open={
+          showFillForm &&
+          Boolean(selectedForm)
+        }
+        onClose={
+          handleCancelForm
+        }
+        title={
+          selectedForm
+            ? `Fill ${selectedForm.name}`
+            : "Fill Form"
+        }
+        size="lg"
+      >
 
-      </div>
+        {selectedForm && (
 
-    </form>
+          <CustomerFormResponse
+            form={selectedForm}
+            customerId={customerId}
+            onSuccess={
+              handleFormSuccess
+            }
+            onCancel={
+              handleCancelForm
+            }
+          />
+
+        )}
+
+      </Modal>
+
+
+      {/* ================================================= */}
+      {/* SELECTED FORM RESPONSES MODAL */}
+      {/* ================================================= */}
+
+      <Modal
+        open={
+          showResponses &&
+          Boolean(selectedForm)
+        }
+        onClose={
+          handleCloseResponses
+        }
+        title={
+          selectedForm
+            ? `${selectedForm.name} Responses`
+            : "Form Responses"
+        }
+        size="lg"
+      >
+
+        {responsesLoading ? (
+
+          <LoadingState
+            message="Loading responses..."
+          />
+
+        ) : responsesError ? (
+
+          <div className="rounded-md bg-red-50 p-4 text-sm text-red-600">
+            {responsesError}
+          </div>
+
+        ) : selectedFormResponses.length === 0 ? (
+
+          <div className="py-10 text-center text-sm text-gray-500">
+            This customer has not submitted
+            this form yet.
+          </div>
+
+        ) : (
+
+          <div className="space-y-3">
+
+            {selectedFormResponses.map(
+              response => (
+
+                <div
+                  key={response.id}
+                  className="flex items-center justify-between rounded-lg border border-gray-200 p-4"
+                >
+
+                  <div>
+
+                    <div className="text-sm font-medium text-gray-900">
+                      Submitted
+                    </div>
+
+                    <div className="mt-1 text-sm text-gray-500">
+                      {formatDate(
+                        response.submittedAt
+                      )}
+                    </div>
+
+                    <div className="mt-1 text-xs text-gray-400">
+                      {response.answers.length}{" "}
+                      answers
+                    </div>
+
+                  </div>
+
+                  <Button
+                    variant="secondary"
+                    onClick={() =>
+                      handleViewResponse(
+                        response.id
+                      )
+                    }
+                  >
+                    View Response
+                  </Button>
+
+                </div>
+
+              )
+            )}
+
+          </div>
+
+        )}
+
+      </Modal>
+
+
+      {/* ================================================= */}
+      {/* INDIVIDUAL RESPONSE DETAILS */}
+      {/* ================================================= */}
+
+      <ResponseDetailsModal
+        responseId={
+          selectedResponseId
+        }
+        form={
+          selectedForm
+        }
+        customer={
+          selectedCustomer
+        }
+        onClose={
+          handleCloseResponseDetails
+        }
+      />
+
+    </>
+  );
+}
+
+
+/* ===================================================== */
+/* HELPERS */
+/* ===================================================== */
+
+function formatDate(
+  date: string
+): string {
+
+  const parsedDate =
+    new Date(date);
+
+  if (
+    Number.isNaN(
+      parsedDate.getTime()
+    )
+  ) {
+    return date;
+  }
+
+  return parsedDate.toLocaleString(
+    "en-IN",
+    {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }
   );
 }

@@ -8,6 +8,8 @@ import { notes } from "./data/note";
 import { responses } from "./data/responses";
 import { CreateCustomerInput, Customer, UpdateCustomerInput } from "../types/customer";
 import { CreateNoteInput, Note } from "../types/note";
+import { CreateFormInput } from "../types/form";
+import { FormResponse } from "../types/response";
 
 
 export const handlers = [
@@ -54,8 +56,6 @@ export const handlers = [
     };
 
     customers.unshift(newCustomer);
-
-    console.log("MSW: Customer created", newCustomer);
 
     return HttpResponse.json(newCustomer, {
       status: 201,
@@ -118,20 +118,17 @@ export const handlers = [
     });
   }),
 
-
-// Form Handlers
+  // Form → all submitted responses
+  
+  // Form Responses handlers
   http.get(
-    "/api/forms",
-    () => {
-        return HttpResponse.json(forms);
-    }
-  ),
-
-  http.get(
-    "/api/forms/:id",
+    "/api/forms/:id/responses",
     ({ params }) => {
+      const formId = params.id as string;
+
+      // Check if form exists
       const form = forms.find(
-        form => form.id === params.id
+        form => form.id === formId
       );
 
       if (!form) {
@@ -145,18 +142,171 @@ export const handlers = [
         );
       }
 
-      return HttpResponse.json(form);
+      // Get responses for this form
+      const formResponses =
+        responses.filter(
+          response =>
+            response.formId === formId
+        );
+
+      return HttpResponse.json(
+        formResponses,
+        {
+          status: 200,
+        }
+      );
     }
   ),
 
+// Form Handlers
   http.get(
-    "/api/forms/:id/responses",
+    "/api/forms",
+    () => {
+        return HttpResponse.json(forms);
+    }
+  ),
+
+  // GET FORM BY ID
+  http.get(
+    "/api/forms/:id",
     ({ params }) => {
+      const formId = params.id as string;
+
       const form = forms.find(
-        form => form.id === params.id
+        form => form.id === formId
       );
-  }
-),
+
+      if (!form) {
+        return HttpResponse.json(
+          {
+            message: "Form not found",
+          },
+          {
+            status: 404,
+          }
+        );
+      }
+
+      return HttpResponse.json(
+        form,
+        {
+          status: 200,
+        }
+      );
+    }
+  ),
+
+  http.post(
+    "/api/forms",
+    async ({
+      request,
+    }) => {
+
+      const body =
+        (await request.json()) as CreateFormInput;
+
+      const now =
+        new Date().toISOString();
+
+      const newForm = {
+        id: `form-${Date.now()}`,
+        ...body,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      forms.unshift(newForm);
+
+      return HttpResponse.json(
+        newForm,
+        {
+          status: 201,
+        }
+      );
+    }
+  ),
+
+  http.put(
+    "/api/forms/:id",
+    async ({
+      params,
+      request,
+    }) => {
+
+      const index =
+        forms.findIndex(
+          form =>
+            form.id ===
+            params.id
+        );
+
+      if (index === -1) {
+        return HttpResponse.json(
+          {
+            message:
+              "Form not found.",
+          },
+          {
+            status: 404,
+          }
+        );
+      }
+
+      const body =
+        (await request.json()) as CreateFormInput;
+
+      const updatedForm = {
+        ...forms[index],
+        ...body,
+        updatedAt:
+          new Date().toISOString(),
+      };
+
+      forms[index] =
+        updatedForm;
+
+      return HttpResponse.json(
+        updatedForm,
+        {
+          status: 200,
+        }
+      );
+    }
+  ),
+
+  http.delete(
+    "/api/forms/:id",
+    ({ params }) => {
+
+      const index =
+        forms.findIndex(
+          form =>
+            form.id ===
+            params.id
+        );
+
+      if (index === -1) {
+        return HttpResponse.json(
+          {
+            message:
+              "Form not found.",
+          },
+          {
+            status: 404,
+          }
+        );
+      }
+
+      forms.splice(index, 1);
+
+      return new HttpResponse(
+        null,
+        {
+          status: 204,
+        }
+      );
+    }
+  ),
 
 // ===============================
 // NOTES HANDLERS
@@ -326,11 +476,37 @@ http.delete(
   }
 ),
 
-//   Form Responses handlers
+  // Form Responses handlers
+
+  // Customer → all submitted forms
+  http.get(
+    "/api/customers/:customerId/form-responses",
+    ({ params }) => {
+
+      const formresponses =
+        responses.filter(
+          response =>
+            response.customerId ===
+            params.customerId
+        );
+
+      return HttpResponse.json(
+        formresponses,
+        {
+          status: 200,
+        }
+      );
+    }
+  ),
+
     http.get(
         "/api/responses",
         () => {
-            return HttpResponse.json(responses);
+            return HttpResponse.json(responses,
+              {
+                status: 200,
+              }
+            );
         }
     ),
 
@@ -352,7 +528,76 @@ http.delete(
                 );
             }
 
-            return HttpResponse.json(response);
+            return HttpResponse.json(response, {
+                status: 200,
+            });
         }
-    )
+    ),
+
+    // CREATE FORM RESPONSE
+http.post(
+  "/api/forms/:formId/responses",
+  async ({ params, request }) => {
+    const body =
+      (await request.json()) as {
+        customerId: string;
+        answers: {
+          fieldId: string;
+          value: string | string[];
+        }[];
+      };
+
+    const formId =
+      params.formId as string;
+
+    if (!body.customerId) {
+      return HttpResponse.json(
+        {
+          message:
+            "Customer ID is required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (
+      !body.answers ||
+      body.answers.length === 0
+    ) {
+      return HttpResponse.json(
+        {
+          message:
+            "At least one answer is required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const newResponse: FormResponse = {
+      id: `response-${Date.now()}`,
+      formId,
+      customerId:
+        body.customerId,
+      submittedAt:
+        new Date().toISOString(),
+      answers:
+        body.answers,
+    };
+
+    responses.unshift(
+      newResponse
+    );
+
+    return HttpResponse.json(
+      newResponse,
+      {
+        status: 201,
+      }
+    );
+  }
+),
 ];

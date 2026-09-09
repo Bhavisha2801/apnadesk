@@ -14,7 +14,7 @@ export default function NewCustomerPage() {
         </p>
       </div>
 
-      <CustomerForm />
+      <CustomerForm customerId="" />
 
     </div>
   );

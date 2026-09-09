@@ -1,12 +1,12 @@
 export type CustomerStatus = "active" | "inactive";
 
-export interface CustomerAddress {
-  street: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country: string;
-}
+// export interface CustomerAddress {
+//   street: string;
+//   city: string;
+//   state: string;
+//   zipCode: string;
+//   country: string;
+// }
 
 export interface Customer {
   id: string;
@@ -16,7 +16,7 @@ export interface Customer {
   phone: string;
   status: CustomerStatus;
   dateOfBirth: string;
-  address: CustomerAddress;
+  address: string;
   createdAt: string;
 }
 
@@ -27,7 +27,7 @@ export interface CreateCustomerInput {
   phone: string;
   status: CustomerStatus;
   dateOfBirth: string;
-  address: CustomerAddress;
+  address: string;
 }
 
 export type UpdateCustomerInput = CreateCustomerInput;

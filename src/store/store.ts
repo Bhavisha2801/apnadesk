@@ -1,9 +1,9 @@
 import { configureStore } from "@reduxjs/toolkit";
 
-import customerReducer from "@/features/customers/customerSlice";
-import formReducer from "@/features/forms/formSlice";
-import noteReducer from "@/features/notes/noteSlice";
-import responseReducer from "@/features/responses/responseSlice";
+import customerReducer from "../features/customers/customerSlice";
+import formReducer from "../features/forms/formSlice";
+import noteReducer from "../features/notes/noteSlice";
+import responseReducer from "../features/responses/responseSlice";
 
 export const store = configureStore({
   reducer: {

@@ -1,5 +1,6 @@
 import { Customer } from "@/src/types/customer";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { fetchCustomers } from "./customerThunks";
 
 interface CustomerState {
   items: Customer[];
@@ -68,6 +69,32 @@ const customerSlice = createSlice({
       state.error = action.payload;
     },
   },
+  extraReducers: builder => {
+    builder.addCase(
+      fetchCustomers.pending,
+      state => {
+        state.loading = true;
+        state.error = null;
+      })
+
+      .addCase(
+        fetchCustomers.fulfilled,
+        (state, action) => {
+          state.loading = false;
+          state.items = action.payload;
+        }
+      )
+
+      .addCase(
+        fetchCustomers.rejected,
+        (state, action) => {
+          state.loading = false;
+          state.error =
+            action.error.message ||
+            "Failed to fetch customers.";
+        }
+      );
+    },
 });
 
 export const {

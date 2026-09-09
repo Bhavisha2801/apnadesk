@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 
+let workerStartPromise: Promise<ServiceWorkerRegistration | undefined> | null =
+  null;
+  
 export default function MSWProvider({
   children,
 }: {
@@ -11,16 +14,16 @@ export default function MSWProvider({
 
   useEffect(() => {
     const init = async () => {
-      if (
-        process.env.NODE_ENV === "development"
-      ) {
-        const { worker } = await import(
-          "../mocks/browser"
-        );
+      if (process.env.NODE_ENV === "development") {
+        const { worker } = await import("../mocks/browser");
 
-        await worker.start({
-          onUnhandledRequest: "bypass",
-        });
+        if (!workerStartPromise) {
+          workerStartPromise = worker.start({
+            onUnhandledRequest: "bypass",
+          });
+        }
+
+        await workerStartPromise;
       }
 
       setReady(true);

@@ -104,21 +104,20 @@ export default function FormBuilder({
     setSaving,
   ] = useState(false);
 
-  const addField = (
-    type: FormFieldType
-  ) => {
-
+  const addField = (type: FormFieldType) => {
     const field: FormField = {
       id: `field-${Date.now()}`,
       type,
       label:
         type === "textarea"
           ? "Untitled textarea"
-          : "Untitled field",
+          : type === "checkbox"
+          ? ""
+          : "",
       placeholder: "",
       required: false,
 
-      ...(type === "select"
+      ...(type === "select" || type === "radio"
         ? {
             options: [
               {
@@ -130,10 +129,7 @@ export default function FormBuilder({
         : {}),
     };
 
-    setFields(prev => [
-      ...prev,
-      field,
-    ]);
+    setFields((prev) => [...prev, field]);
   };
 
   const updateField = (
@@ -431,9 +427,8 @@ export default function FormBuilder({
 
               </label>
 
-              {field.type ===
-                "select" && (
-
+              {(field.type === "select" ||
+                field.type === "checkbox") && (
                 <div className="mt-4">
 
                   <label className="text-sm font-medium">
@@ -443,78 +438,54 @@ export default function FormBuilder({
                   <div className="mt-2 space-y-2">
 
                     {field.options?.map(
-                      (
-                        option,
-                        optionIndex
-                      ) => (
-
+                      (option, optionIndex) => (
                         <div
-                          key={
-                            optionIndex
-                          }
-                          className="flex gap-2"
+                          key={optionIndex}
+                          className="flex items-center gap-2"
                         >
 
+                          {/* Checkbox preview */}
+                          {field.type === "checkbox" && (
+                            <input
+                              type="checkbox"
+                              disabled
+                              className="h-4 w-4"
+                            />
+                          )}
+
                           <Input
-                            value={
-                              option.label
-                            }
-                            onChange={
-                              event => {
+                            value={option.label}
+                            onChange={(event) => {
+                              const options = [
+                                ...(field.options ?? []),
+                              ];
 
-                                const options =
-                                  [
-                                    ...(field.options ??
-                                      []),
-                                  ];
+                              options[optionIndex] = {
+                                ...options[optionIndex],
+                                label: event.target.value,
+                                value: event.target.value
+                                  .toLowerCase()
+                                  .replace(/\s+/g, "-"),
+                              };
 
-                                options[
-                                  optionIndex
-                                ] = {
-                                  ...options[
-                                    optionIndex
-                                  ],
-                                  label:
-                                    event
-                                      .target
-                                      .value,
-                                  value:
-                                    event
-                                      .target
-                                      .value
-                                      .toLowerCase()
-                                      .replace(
-                                        /\s+/g,
-                                        "-"
-                                      ),
-                                };
-
-                                updateField(
-                                  field.id,
-                                  {
-                                    options,
-                                  }
-                                );
-                              }
-                            }
+                              updateField(
+                                field.id,
+                                {
+                                  options,
+                                }
+                              );
+                            }}
                           />
 
                           <Button
                             variant="danger"
                             onClick={() => {
-
-                              const options =
-                                (
-                                  field.options ??
-                                  []
-                                ).filter(
-                                  (
-                                    _,
-                                    i
-                                  ) =>
-                                    i !==
-                                    optionIndex
-                                );
+                              const options = (
+                                field.options ?? []
+                              ).filter(
+                                (_, i) =>
+                                  i !== optionIndex
+                              );
 
                               updateField(
                                 field.id,
@@ -528,7 +499,6 @@ export default function FormBuilder({
                           </Button>
 
                         </div>
-
                       )
                     )}
 
@@ -536,27 +506,15 @@ export default function FormBuilder({
                       size="sm"
                       variant="secondary"
                       onClick={() => {
-
                         const options = [
-                          ...(field.options ??
-                            []),
+                          ...(field.options ?? []),
                           {
-                            label:
-                              `Option ${
-                                (
-                                  field.options
-                                    ?.length ??
-                                  0
-                                ) + 1
-                              }`,
-                            value:
-                              `option-${
-                                (
-                                  field.options
-                                    ?.length ??
-                                  0
-                                ) + 1
-                              }`,
+                            label: `Option ${
+                              (field.options?.length ?? 0) + 1
+                            }`,
+                            value: `option-${
+                              (field.options?.length ?? 0) + 1
+                            }`,
                           },
                         ];
 
@@ -568,7 +526,7 @@ export default function FormBuilder({
                         );
                       }}
                     >
-                      Add Option
+                      + Add Option
                     </Button>
 
                   </div>

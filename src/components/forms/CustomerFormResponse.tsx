@@ -55,7 +55,7 @@ export default function CustomerFormResponse({
 
   const handleChange = (
     fieldId: string,
-    value: string
+    value: string | string[]
   ) => {
     setValues(prev => ({
       ...prev,
@@ -72,16 +72,27 @@ export default function CustomerFormResponse({
     setError(null);
 
     // Validate required fields
-    for (
-      const field of form.fields
-    ) {
-
+    for (const field of form.fields) {
       if (!field.required) {
         continue;
       }
 
-      const value =
-        values[field.id];
+      const value = values[field.id];
+
+      if (field.type === "checkbox") {
+        if (
+          !Array.isArray(value) ||
+          value.length === 0
+        ) {
+          setError(
+            `${field.label} is required.`
+          );
+
+          return;
+        }
+
+        continue;
+      }
 
       if (
         !value ||
@@ -212,7 +223,7 @@ interface DynamicFieldProps {
     | string[];
 
   onChange: (
-    value: string
+    value: string | string[]
   ) => void;
 }
 
@@ -228,153 +239,179 @@ function DynamicField({
       : value;
 
   switch (field.type) {
+  case "textarea":
+    return (
+      <Textarea
+        label={field.label}
+        value={stringValue}
+        placeholder={field.placeholder}
+        rows={5}
+        required={field.required}
+        onChange={(event) =>
+          onChange(event.target.value)
+        }
+      />
+    );
 
-    case "textarea":
-      return (
-        <Textarea
-          label={field.label}
+  case "select":
+    return (
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">
+          {field.label}
+          {field.required && (
+            <span className="ml-1 text-red-500">
+              *
+            </span>
+          )}
+        </label>
+
+        <select
           value={stringValue}
-          placeholder={
-            field.placeholder
+          required={field.required}
+          onChange={(event) =>
+            onChange(event.target.value)
           }
-          rows={5}
-          required={
-            field.required
-          }
-          onChange={event =>
-            onChange(
-              event.target.value
-            )
-          }
-        />
-      );
+          className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
+        >
+          <option value="">
+            Select {field.label}
+          </option>
 
-    case "select":
-      return (
+          {field.options?.map((option) => (
+            <option
+              key={option.value}
+              value={option.value}
+            >
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+
+  case "checkbox":
+    return (
+      <div className="space-y-3">
+
+        <label className="block text-sm font-medium text-gray-700">
+          {field.label}
+
+          {field.required && (
+            <span className="ml-1 text-red-500">
+              *
+            </span>
+          )}
+        </label>
+
         <div className="space-y-2">
 
-          <label className="block text-sm font-medium text-gray-700">
-            {field.label}
-            {field.required && (
-              <span className="ml-1 text-red-500">
-                *
-              </span>
-            )}
-          </label>
+          {field.options?.map((option) => {
+            const selectedValues =
+              Array.isArray(value)
+                ? value
+                : [];
 
-          <select
-            value={stringValue}
-            required={field.required}
-            onChange={event =>
-              onChange(
-                event.target.value
-              )
-            }
-            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
-          >
+            const checked =
+              selectedValues.includes(
+                option.value
+              );
 
-            <option value="">
-              Select {field.label}
-            </option>
+            return (
+              <label
+                key={option.value}
+                className="flex items-center gap-3"
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={(event) => {
+                    const currentValues =
+                      Array.isArray(value)
+                        ? value
+                        : [];
 
-            {field.options?.map(
-              option => (
-                <option
-                  key={
-                    option.value
-                  }
-                  value={
-                    option.value
-                  }
-                >
+                    const newValues =
+                      event.target.checked
+                        ? [
+                            ...currentValues,
+                            option.value,
+                          ]
+                        : currentValues.filter(
+                            (item) =>
+                              item !==
+                              option.value
+                          );
+
+                    onChange(newValues);
+                  }}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+
+                <span className="text-sm text-gray-700">
                   {option.label}
-                </option>
-              )
-            )}
-
-          </select>
+                </span>
+              </label>
+            );
+          })}
 
         </div>
-      );
+      </div>
+    );
 
-    case "date":
-      return (
-        <Input
-          label={field.label}
-          type="date"
-          value={stringValue}
-          placeholder={
-            field.placeholder
-          }
-          required={
-            field.required
-          }
-          onChange={event =>
-            onChange(
-              event.target.value
-            )
-          }
-        />
-      );
+  case "date":
+    return (
+      <Input
+        label={field.label}
+        type="date"
+        value={stringValue}
+        placeholder={field.placeholder}
+        required={field.required}
+        onChange={(event) =>
+          onChange(event.target.value)
+        }
+      />
+    );
 
-    case "email":
-      return (
-        <Input
-          label={field.label}
-          type="email"
-          value={stringValue}
-          placeholder={
-            field.placeholder
-          }
-          required={
-            field.required
-          }
-          onChange={event =>
-            onChange(
-              event.target.value
-            )
-          }
-        />
-      );
+  case "email":
+    return (
+      <Input
+        label={field.label}
+        type="email"
+        value={stringValue}
+        placeholder={field.placeholder}
+        required={field.required}
+        onChange={(event) =>
+          onChange(event.target.value)
+        }
+      />
+    );
 
-    case "number":
-      return (
-        <Input
-          label={field.label}
-          type="number"
-          value={stringValue}
-          placeholder={
-            field.placeholder
-          }
-          required={
-            field.required
-          }
-          onChange={event =>
-            onChange(
-              event.target.value
-            )
-          }
-        />
-      );
+  case "number":
+    return (
+      <Input
+        label={field.label}
+        type="number"
+        value={stringValue}
+        placeholder={field.placeholder}
+        required={field.required}
+        onChange={(event) =>
+          onChange(event.target.value)
+        }
+      />
+    );
 
-    default:
-      return (
-        <Input
-          label={field.label}
-          type="text"
-          value={stringValue}
-          placeholder={
-            field.placeholder
-          }
-          required={
-            field.required
-          }
-          onChange={event =>
-            onChange(
-              event.target.value
-            )
-          }
-        />
-      );
-  }
+  default:
+    return (
+      <Input
+        label={field.label}
+        type="text"
+        value={stringValue}
+        placeholder={field.placeholder}
+        required={field.required}
+        onChange={(event) =>
+          onChange(event.target.value)
+        }
+      />
+    );
+}
 }

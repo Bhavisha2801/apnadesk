@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -50,11 +51,8 @@ const STATUS_OPTIONS: SelectOption[] = [
   },
 ];
 
-const ITEMS_PER_PAGE = 10;
-
 export default function CustomerPageClient() {
   const router = useRouter();
-
   const dispatch = useAppDispatch();
 
   const {
@@ -74,23 +72,23 @@ export default function CustomerPageClient() {
   const [currentPage, setCurrentPage] =
     useState(1);
 
+  const [pageSize, setPageSize] =
+    useState(10);
+
   /*
    * Fetch customers
+   *
+   * Runs only when the component mounts.
    */
   useEffect(() => {
     dispatch(fetchCustomers());
   }, [dispatch]);
 
   /*
-   * Reset pagination when
-   * search or status changes
-   */
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search, status]);
-
-  /*
-   * Search + Status filtering
+   * Filter customers
+   *
+   * useMemo prevents filtering all customers
+   * on every component render.
    */
   const filteredCustomers = useMemo(() => {
     const searchValue =
@@ -111,10 +109,6 @@ export default function CustomerPageClient() {
           .toLowerCase()
           .includes(searchValue);
 
-      /*
-       * "all" means both active
-       * and inactive customers.
-       */
       const matchesStatus =
         status === "all" ||
         customer.status === status;
@@ -133,10 +127,15 @@ export default function CustomerPageClient() {
   /*
    * Calculate total pages
    */
-  const totalPages = Math.ceil(
-    filteredCustomers?.length /
-      ITEMS_PER_PAGE
-  );
+  const totalPages = useMemo(() => {
+    return Math.ceil(
+      filteredCustomers.length /
+        pageSize
+    );
+  }, [
+    filteredCustomers.length,
+    pageSize,
+  ]);
 
   /*
    * Get customers for current page
@@ -144,46 +143,94 @@ export default function CustomerPageClient() {
   const paginatedCustomers = useMemo(() => {
     const startIndex =
       (currentPage - 1) *
-      ITEMS_PER_PAGE;
-
-    const endIndex =
-      startIndex + ITEMS_PER_PAGE;
+      pageSize;
 
     return filteredCustomers.slice(
       startIndex,
-      endIndex
+      startIndex + pageSize
     );
   }, [
     filteredCustomers,
     currentPage,
+    pageSize,
   ]);
+
+  /*
+   * Search handler
+   */
+  const handleSearchChange = useCallback(
+    (
+      event: React.ChangeEvent<HTMLInputElement>
+    ) => {
+      setSearch(event.target.value);
+      setCurrentPage(1);
+    },
+    []
+  );
+
+  /*
+   * Status handler
+   */
+  const handleStatusChange = useCallback(
+    (
+      event: React.ChangeEvent<HTMLSelectElement>
+    ) => {
+      setStatus(
+        event.target
+          .value as CustomerStatusFilter
+      );
+
+      setCurrentPage(1);
+    },
+    []
+  );
+
+  /*
+   * Page change handler
+   */
+  const handlePageChange = useCallback(
+    (page: number) => {
+      setCurrentPage(page);
+    },
+    []
+  );
+
+  /*
+   * Page size handler
+   */
+  const handlePageSizeChange = useCallback(
+    (newPageSize: number) => {
+      setPageSize(newPageSize);
+      setCurrentPage(1);
+    },
+    []
+  );
 
   /*
    * Retry fetching customers
    */
-  const handleRetry = () => {
+  const handleRetry = useCallback(() => {
     dispatch(fetchCustomers());
-  };
+  }, [dispatch]);
 
   /*
    * Add customer
    */
-  const handleAddCustomer = () => {
-    router.push(
-      "/customers/new"
-    );
-  };
+  const handleAddCustomer = useCallback(() => {
+    router.push("/customers/new");
+  }, [router]);
 
   /*
    * Customer detail
    */
-  const handleCustomerClick = (
-    customerId: string
-  ) => {
-    router.push(
-      `/customers/${customerId}`
-    );
-  };
+  const handleCustomerClick = useCallback(
+    (customerId: string) => {
+      router.push(
+        `/customers/${customerId}`
+      );
+    },
+    [router]
+  );
 
   return (
     <div className="space-y-6 p-6">
@@ -224,11 +271,7 @@ export default function CustomerPageClient() {
             label="Search"
             placeholder="Search by name, email or phone..."
             value={search}
-            onChange={(event) =>
-              setSearch(
-                event.target.value
-              )
-            }
+            onChange={handleSearchChange}
           />
 
           {/* Status */}
@@ -236,11 +279,7 @@ export default function CustomerPageClient() {
           <Select
             label="Status"
             value={status}
-            onChange={(event) =>
-              setStatus(
-                event.target.value as CustomerStatusFilter
-              )
-            }
+            onChange={handleStatusChange}
             options={STATUS_OPTIONS}
           />
 
@@ -294,9 +333,7 @@ export default function CustomerPageClient() {
             action={
               customers.length === 0 ? (
                 <Button
-                  onClick={
-                    handleAddCustomer
-                  }
+                  onClick={handleAddCustomer}
                 >
                   Add Customer
                 </Button>
@@ -305,7 +342,7 @@ export default function CustomerPageClient() {
           />
         )}
 
-      {/* Customer Table + Pagination */}
+      {/* Customer Table */}
 
       {!loading &&
         !error &&
@@ -321,13 +358,27 @@ export default function CustomerPageClient() {
               }
             />
 
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={
-                setCurrentPage
-              }
-            />
+            {/* Pagination */}
+
+            {totalPages > 1 && (
+              <Pagination
+                currentPage={
+                  currentPage
+                }
+                totalPages={
+                  totalPages
+                }
+                pageSize={
+                  pageSize
+                }
+                onPageChange={
+                  handlePageChange
+                }
+                onPageSizeChange={
+                  handlePageSizeChange
+                }
+              />
+            )}
 
           </div>
         )}

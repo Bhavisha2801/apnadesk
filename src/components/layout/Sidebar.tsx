@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 const navigationItems = [
@@ -19,27 +20,27 @@ export default function Sidebar() {
 
   return (
     <aside className="flex w-64 flex-col border-r bg-white">
-      {/* Logo / Application name */}
-
+      {/* Logo */}
       <div className="flex h-16 items-center border-b px-6">
-        <Link
-          href="/"
-          className="text-lg font-semibold"
-        >
-          CustomerHub
+        <Link href="/" className="flex items-center">
+          <Image
+            src="/images/apnadesk-logo.png"
+            alt="ApnaDesk"
+            width={150}
+            height={50}
+            className="h-auto w-[150px] object-contain"
+            priority
+          />
         </Link>
       </div>
 
       {/* Navigation */}
-
       <nav className="flex-1 p-4">
         <div className="space-y-1">
           {navigationItems.map((item) => {
             const isActive =
               pathname === item.href ||
-              pathname.startsWith(
-                `${item.href}/`
-              );
+              pathname.startsWith(`${item.href}/`);
 
             return (
               <Link

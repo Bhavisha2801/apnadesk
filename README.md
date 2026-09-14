@@ -10,7 +10,7 @@ submissions, responses, and customer files from a single interface.
 ## Live Demo
 
 **Vercel:**
-https://apna-desk-nk5ulk1t2-bhavisha2801s-projects.vercel.app/
+https://apnadesk.vercel.app/
 
 ------------------------------------------------------------------------
 

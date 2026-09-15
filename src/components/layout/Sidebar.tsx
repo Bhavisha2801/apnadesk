@@ -23,15 +23,14 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="flex h-16 items-center border-b px-6">
         <Link href="/" className="flex items-center">
-          {/* <Image
-            src="/images/apnadesk-logo.png"
+          <Image
+            src="/apnadesk-logo.png"
             alt="ApnaDesk"
             width={150}
             height={50}
             className="h-auto w-[150px] object-contain"
             priority
-          /> */}
-          Apna<strong>Desk</strong>
+          />
         </Link>
       </div>
 
